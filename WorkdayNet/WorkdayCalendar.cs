@@ -61,7 +61,7 @@ namespace WorkdayNet
             //    timeSpan = new TimeSpan(0, timeSpan.Hours, timeSpan.Minutes, 0);
             //}
 
-            startDate = CheckHoliday(startDate);
+            startDate = CheckHoliday(startDate, true);
 
             // checks if startDate is outside business hours
             if (IsOutsideBusinessHours(startDate, startDate, 0))
@@ -75,6 +75,16 @@ namespace WorkdayNet
                 startDate = new DateTime(startDate.Year, startDate.Month, startDate.Day, workDay.StartHours, workDay.StartMinutes, 0);
             }
 
+            startDate = CheckHoliday(startDate, false);
+
+            // add days one by one...
+            for(int i = 0; i < timeSpan.Days; i++)
+            {
+                startDate = startDate.AddDays(1);
+                startDate = CheckHoliday(startDate, false);
+            }
+
+            timeSpan = new TimeSpan(0, timeSpan.Hours, timeSpan.Minutes, 0);
 
             DateTime endDate = startDate.Add(timeSpan);
 
@@ -85,6 +95,7 @@ namespace WorkdayNet
                 endDate = endDate.AddDays(1);
 
                 endDate = new DateTime(endDate.Year, endDate.Month, endDate.Day, workDay.StartHours, workDay.StartMinutes, 0);
+                endDate = CheckHoliday(endDate, false);
 
                 // we're sure here that this won't lead to outside business hours as it's less than a workday
                 endDate = endDate.AddHours(extraHours.Hours);
@@ -94,19 +105,24 @@ namespace WorkdayNet
             return endDate;
         }
 
-        public DateTime CheckHoliday(DateTime date)
+        // the idea is that this should be called everytime we add one workday to the enddate
+        // but can also be used to ensure that startdate is at the first working day (not weekend, not holiday)
+        // 
+        // todo: could be implemented better to not be called manually everytime, but as part of "DateTime.AddDays()" method
+        public DateTime CheckHoliday(DateTime date, bool isStartDate)
         {
-            bool dateSkipped = false;
+            bool leapDay = false;
             // weekend
             while (date.DayOfWeek == DayOfWeek.Saturday ||
                 date.DayOfWeek == DayOfWeek.Sunday)
             {
                 date = date.AddDays(1);
-                dateSkipped = true;
+                leapDay = true;
             }
 
-            if (dateSkipped)
+            if (isStartDate && leapDay)
             {
+                // isStartDate flag also sets the start hours / minutes, as it's starting in a non working day
                 date = new DateTime(date.Year, date.Month, date.Day, workDay.StartHours, workDay.StartMinutes, 0);
             }
 

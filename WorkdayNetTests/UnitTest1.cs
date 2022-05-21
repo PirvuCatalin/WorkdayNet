@@ -69,7 +69,7 @@ namespace WorkdayNetTests
         // also, tests above don't test for holidays!
 
         [Test]
-        public void MultidayIncrements()
+        public void MultidayIncrementsTest()
         {
             IWorkdayCalendar calendar = new WorkdayCalendar();
             calendar.SetWorkdayStartAndStop(8, 0, 16, 0);
@@ -82,7 +82,7 @@ namespace WorkdayNetTests
         }
 
         [Test]
-        public void OutsideOfBusinessHours()
+        public void OutsideOfBusinessHoursTest()
         {
             IWorkdayCalendar calendar = new WorkdayCalendar();
             calendar.SetWorkdayStartAndStop(8, 0, 16, 0);
@@ -95,7 +95,7 @@ namespace WorkdayNetTests
         }
 
         [Test]
-        public void OutsideOfBusinessHoursSpecialCase()
+        public void OutsideOfBusinessHoursSpecialCaseTest()
         {
             IWorkdayCalendar calendar = new WorkdayCalendar();
             calendar.SetWorkdayStartAndStop(21, 0, 3, 0);
@@ -108,7 +108,7 @@ namespace WorkdayNetTests
         }
 
         [Test]
-        public void StartAfterStopHours()
+        public void StartAfterStopHoursTest()
         {
             IWorkdayCalendar calendar = new WorkdayCalendar();
             calendar.SetWorkdayStartAndStop(8, 0, 16, 0);
@@ -121,7 +121,7 @@ namespace WorkdayNetTests
         }
 
         [Test]
-        public void StartBeforeStartHours()
+        public void StartBeforeStartHoursTest()
         {
             IWorkdayCalendar calendar = new WorkdayCalendar();
             calendar.SetWorkdayStartAndStop(8, 0, 16, 0);
@@ -134,7 +134,7 @@ namespace WorkdayNetTests
         }
 
         [Test]
-        public void StartDateWeekend()
+        public void StartDateWeekendTest()
         {
             IWorkdayCalendar calendar = new WorkdayCalendar();
             calendar.SetWorkdayStartAndStop(8, 0, 16, 0);
@@ -144,6 +144,19 @@ namespace WorkdayNetTests
             var incrementedDate = calendar.GetWorkdayIncrement(start, increment);
 
             Assert.That(incrementedDate, Is.EqualTo(new DateTime(2022, 5, 23, 10, 0, 0)));
+        }
+
+        [Test]
+        public void IncomingWeekendTest()
+        {
+            IWorkdayCalendar calendar = new WorkdayCalendar();
+            calendar.SetWorkdayStartAndStop(8, 0, 16, 0);
+
+            var start = new DateTime(2022, 5, 20, 12, 0, 0);
+            decimal increment = 1.25m;
+            var incrementedDate = calendar.GetWorkdayIncrement(start, increment);
+
+            Assert.That(incrementedDate, Is.EqualTo(new DateTime(2022, 5, 23, 14, 0, 0)));
         }
 
 
