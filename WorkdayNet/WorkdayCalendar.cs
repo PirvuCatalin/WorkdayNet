@@ -41,11 +41,151 @@ namespace WorkdayNet
 
         public DateTime GetWorkdayIncrement(DateTime startDate, decimal incrementInWorkdays)
         {
-            TimeSpan timeSpan = IncrementToTimeSpan(incrementInWorkdays);
-            return startDate.Add(timeSpan);
+            // the commented-out implementation below is for the simple scenario when having 
+            // workday job that can be done in the same day
+            //TimeSpan timeSpan = ConvertIncrementToTimeSpan(incrementInWorkdays);
+            //return startDate.Add(timeSpan);
+
+            // clever thing here is that full workdays can be easily added directly to the startDate
+            // this works because in a period of 24 hours you're going to work a "workday",
+            // which can be any value between 0 and 24 hours (ofc usually 8 hours)
+
+            TimeSpan timeSpan = ConvertIncrementToTimeSpan(incrementInWorkdays);
+
+            //if (timeSpan.Days > 0)
+            //{
+            //    // clever thing here is that full workdays can be easily added directly to the startDate
+            //    // this works because in a period of 24 hours you're going to work a "workday",
+            //    // which can be any value between 0 and 24 hours (ofc usually 8 hours)
+            //    startDate.AddDays(timeSpan.Days);
+            //    timeSpan = new TimeSpan(0, timeSpan.Hours, timeSpan.Minutes, 0);
+            //}
+
+            startDate = CheckHoliday(startDate);
+
+            // checks if startDate is outside business hours
+            if (IsOutsideBusinessHours(startDate, startDate, 0))
+            {
+                startDate = startDate.AddDays(1);
+
+                startDate = new DateTime(startDate.Year, startDate.Month, startDate.Day, workDay.StartHours, workDay.StartMinutes, 0);
+            }
+            else if (IsStartDateBeforeStartHours(startDate))
+            {
+                startDate = new DateTime(startDate.Year, startDate.Month, startDate.Day, workDay.StartHours, workDay.StartMinutes, 0);
+            }
+
+
+            DateTime endDate = startDate.Add(timeSpan);
+
+            if (IsOutsideBusinessHours(endDate, startDate, timeSpan.Days))
+            {
+                // let's stop for today, let's do it tomorrow
+                TimeSpan extraHours = GetExtraWorkedHours(endDate);
+                endDate = endDate.AddDays(1);
+
+                endDate = new DateTime(endDate.Year, endDate.Month, endDate.Day, workDay.StartHours, workDay.StartMinutes, 0);
+
+                // we're sure here that this won't lead to outside business hours as it's less than a workday
+                endDate = endDate.AddHours(extraHours.Hours);
+                endDate = endDate.AddMinutes(extraHours.Minutes);
+            }
+
+            return endDate;
         }
 
-        // the actual increment is decimal workdays and the expected precision is minutes, so we can discard seconds -> miliseconds ...
+        public DateTime CheckHoliday(DateTime date)
+        {
+            bool dateSkipped = false;
+            // weekend
+            while (date.DayOfWeek == DayOfWeek.Saturday ||
+                date.DayOfWeek == DayOfWeek.Sunday)
+            {
+                date = date.AddDays(1);
+                dateSkipped = true;
+            }
+
+            if (dateSkipped)
+            {
+                date = new DateTime(date.Year, date.Month, date.Day, workDay.StartHours, workDay.StartMinutes, 0);
+            }
+
+            return date;
+        }
+
+        private TimeSpan GetExtraWorkedHours(DateTime endDate)
+        {
+            DateTime actualEndDate = new DateTime(endDate.Year, endDate.Month, endDate.Day, workDay.StopHours, workDay.StopMinutes, endDate.Second);
+
+            if (endDate.Hour < workDay.StopHours)
+            {
+                actualEndDate = actualEndDate.AddDays(-1); // we leaped a day
+            }
+
+            return endDate - actualEndDate; // where we only care about hours and minutes
+        }
+
+        private bool IsOutsideBusinessHours(DateTime endDate, DateTime startDate, int expectedDays)
+        {
+            if ((endDate - startDate).Days != expectedDays)
+            {
+                // this is one special case where worked hours in a day could lead to leaping a day
+                return true;
+            }
+
+            if (workDay.StopHours < workDay.StartHours) // if work takes place during day leaps
+            {
+                if (endDate.Hour >= workDay.StartHours)
+                {
+                    return false;
+                }
+
+                if (endDate.Hour < workDay.StopHours)
+                {
+                    return false;
+                }
+
+                if (endDate.Hour == workDay.StopHours &&
+                    endDate.Minute <= workDay.StopMinutes)
+                {
+                    return false;
+                }
+
+                return true;
+            }
+
+            if (endDate.Hour > workDay.StopHours)
+            {
+                return true;
+            }
+
+            if (endDate.Hour == workDay.StopHours &&
+                endDate.Minute > workDay.StopMinutes)
+            {
+                return true;
+            }
+
+            return false;
+        }
+
+        public bool IsStartDateBeforeStartHours(DateTime startDate)
+        {
+            if (startDate.Hour < workDay.StartHours)
+            {
+                return true;
+            }
+
+            if (startDate.Hour == workDay.StartHours &&
+                startDate.Minute < workDay.StartMinutes)
+            {
+                return true;
+            }
+
+            return false;
+        }
+
+        // the actual increment is decimal workdays and the expected precision is minutes,
+        // so we can discard seconds -> miliseconds ...
         // e.g. for 24-05-2004 19:03 with an addition of 44.723656 work days is 27-07-2004 13:47
         // we can just focus on the hours + minutes part 
         //      0.723656 * 8h = 5.789248 h => that means we're going to reach 13:00 ->
@@ -53,8 +193,11 @@ namespace WorkdayNet
         //      we could go further and see that 0.35488 * 60s = 21.2928 s => the final time is actually 13:47:21
         // but we won't
         //
-        //  Important note: TimeSpan provides helpful methods (FromDays), but in our case the workdays = variable hours so we'll just use it for passing data
-        public TimeSpan IncrementToTimeSpan(decimal incrementInWorkdays)
+        // TODO: make this also work with seconds, milisecond precision (time = money)
+        //
+        //  Important note: TimeSpan provides helpful methods (FromDays),
+        //  but in our case the workdays = variable hours so we'll just use it for passing data
+        public TimeSpan ConvertIncrementToTimeSpan(decimal incrementInWorkdays)
         {
             // would be integer, but can overflow
             decimal days = Math.Truncate(incrementInWorkdays);
