@@ -159,20 +159,96 @@ namespace WorkdayNetTests
             Assert.That(incrementedDate, Is.EqualTo(new DateTime(2022, 5, 23, 14, 0, 0)));
         }
 
+        [Test]
+        public void IncomingWeekendAndHolidaysTest()
+        {
+            IWorkdayCalendar calendar = new WorkdayCalendar();
+            calendar.SetHoliday(new DateTime(2022, 5, 24, 0, 0, 0));
+            calendar.SetHoliday(new DateTime(2022, 5, 25, 0, 0, 0));
+            calendar.SetWorkdayStartAndStop(8, 0, 16, 0);
 
-        //[Test]
-        //public void NegativeTest1()
-        //{
-        //    IWorkdayCalendar calendar = new WorkdayCalendar();
-        //    calendar.SetWorkdayStartAndStop(8, 0, 16, 0);
-        //    calendar.SetRecurringHoliday(5, 17);
-        //    calendar.SetHoliday(new DateTime(2004, 5, 27));
+            var start = new DateTime(2022, 5, 20, 12, 0, 0);
+            decimal increment = 2.25m;
+            var incrementedDate = calendar.GetWorkdayIncrement(start, increment);
 
-        //    var start = new DateTime(2004, 5, 24, 18, 5, 0);
-        //    decimal increment = -5.5m;
-        //    var incrementedDate = calendar.GetWorkdayIncrement(start, increment);
+            Assert.That(incrementedDate, Is.EqualTo(new DateTime(2022, 5, 26, 14, 0, 0)));
+        }
 
-        //    Assert.That(incrementedDate, Is.EqualTo(new DateTime(1, 01, 01, 0, 0, 0)));
-        //}
+        [Test]
+        public void IncomingWeekendAndHolidaysAndRecurringHolidaysTest()
+        {
+            IWorkdayCalendar calendar = new WorkdayCalendar();
+            calendar.SetHoliday(new DateTime(2022, 5, 24, 0, 0, 0));
+            calendar.SetHoliday(new DateTime(2022, 5, 25, 0, 0, 0));
+            calendar.SetRecurringHoliday(5, 26);
+            calendar.SetWorkdayStartAndStop(8, 0, 16, 0);
+
+            var start = new DateTime(2022, 5, 20, 12, 0, 0);
+            decimal increment = 3.25m;
+            var incrementedDate = calendar.GetWorkdayIncrement(start, increment);
+
+            // 28 and 29 is weekend so 27 would be one work day and 30 the last one
+            Assert.That(incrementedDate, Is.EqualTo(new DateTime(2022, 5, 30, 14, 0, 0)));
+        }
+
+        [Test]
+        public void GivenPositiveDatesTests()
+        {
+            IWorkdayCalendar calendar = new WorkdayCalendar();
+            calendar.SetWorkdayStartAndStop(8, 0, 16, 0);
+            calendar.SetRecurringHoliday(5, 17);
+            calendar.SetHoliday(new DateTime(2004, 5, 27));
+
+            var start = new DateTime(2004, 5, 24, 18, 5, 0);
+            decimal increment = 44.723656m;
+            var incrementedDate = calendar.GetWorkdayIncrement(start, increment);
+
+            Assert.That(incrementedDate, Is.EqualTo(new DateTime(2004, 7, 27, 13, 47, 0)));
+
+            start = new DateTime(2004, 5, 24, 8, 3, 0);
+            increment = 12.782709m;
+            incrementedDate = calendar.GetWorkdayIncrement(start, increment);
+
+            Assert.That(incrementedDate, Is.EqualTo(new DateTime(2004, 6, 10, 14, 18, 0)));
+
+            start = new DateTime(2004, 5, 24, 7, 3, 0);
+            increment = 8.276628m;
+            incrementedDate = calendar.GetWorkdayIncrement(start, increment);
+
+            Assert.That(incrementedDate, Is.EqualTo(new DateTime(2004, 6, 4, 10, 12, 0)));
+        }
+
+        [Test]
+        public void GivenNegativeTest1()
+        {
+            IWorkdayCalendar calendar = new WorkdayCalendar();
+            calendar.SetWorkdayStartAndStop(8, 0, 16, 0);
+            calendar.SetRecurringHoliday(5, 17);
+            calendar.SetHoliday(new DateTime(2004, 5, 27));
+
+            var start = new DateTime(2004, 5, 24, 18, 5, 0);
+            decimal increment = -5.5m;
+            var incrementedDate = calendar.GetWorkdayIncrement(start, increment);
+
+            Assert.That(incrementedDate, Is.EqualTo(new DateTime(2004, 5, 14, 12, 0, 0)));
+        }
+
+        [Test]
+        public void GivenNegativeTest2()
+        {
+            IWorkdayCalendar calendar = new WorkdayCalendar();
+            calendar.SetWorkdayStartAndStop(8, 0, 16, 0);
+            calendar.SetRecurringHoliday(5, 17);
+            calendar.SetHoliday(new DateTime(2004, 5, 27));
+
+            var start = new DateTime(2004, 5, 24, 18, 3, 0);
+            decimal increment = -6.7470217m;
+            var incrementedDate = calendar.GetWorkdayIncrement(start, increment);
+
+            Assert.That(incrementedDate, Is.EqualTo(new DateTime(2004, 5, 13, 10, 2, 0)));
+        }
+
+        // TODO: check other combinations of holidays for negative increment... it might fail
+        // also test negative increment for people who work between days e.g. from 22:00 PM to 02:00 AM
     }
 }
